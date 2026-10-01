@@ -40,7 +40,7 @@ grid-template-areas:"head head" "wx wx" "air elec" "fuel fuel";overflow:auto}htm
 </head>
 <body>
 <div id="app">
-  <div id="head" class="card"><div id="clock">--:--</div><div id="date"></div><div id="bat"></div></div>
+  <div id="head" class="card"><div id="clock">--:--</div><div id="date"></div><button id="surv" class="btn" style="display:none" onclick="toggleSurv()"></button><div id="bat"></div></div>
   <div id="wx" class="card"><h2 id="wxh">Météo</h2><div id="wxb"></div></div>
   <div id="air" class="card"><h2>Air &amp; pollens</h2><div id="airb"></div></div>
   <div id="fuel" class="card"><h2 id="fuelh">Carburants</h2><div id="fuelb" class="tiles"></div></div>
@@ -157,6 +157,12 @@ function elecChart(){
       $('#note').textContent='Jaune : moyenne du jour · gris : maximum du jour.'}
   });
 }
+
+/* ---- surveillance (bouton visible seulement dans l'app Android) ---- */
+let SV=false;
+function setSurv(v){SV=v;const b=$('#surv');if(!b)return;b.style.display='';b.textContent=v?'⏹ Arrêter la surveillance':'🔒 Je pars';b.className='btn'+(v?' on':'')}
+function toggleSurv(){if(!window.Android)return;if(SV){Android.stopSurveillance();setSurv(false)}else Android.startSurveillance()}
+if(window.Android)setSurv(Android.isSurveillance());
 
 /* ---- batterie, cycle de vie ---- */
 if(navigator.getBattery)navigator.getBattery().then(b=>{const u=()=>{const p=Math.round(b.level*100),e=$('#bat');e.textContent=(b.charging?'⚡ ':'🔋 ')+p+' %';e.className=(!b.charging&&p<25)?'low':''};u();b.onlevelchange=b.onchargingchange=u});

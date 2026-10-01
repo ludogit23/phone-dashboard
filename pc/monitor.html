@@ -1,0 +1,33 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Monitoring</title>
+<style>
+:root{--g:#3ddc84;--y:#ffc233;--r:#ff5a5f;--d:#7d8792}
+*{box-sizing:border-box;margin:0}html,body{height:100%;background:#000;color:#eef1f4;font-family:system-ui,Roboto,sans-serif;overflow:hidden}
+#a{height:100%;display:grid;gap:10px;padding:12px;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr}
+.c{background:#0d0f12;border-radius:16px;padding:12px 14px;min-height:0;overflow:hidden}
+h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--d);margin-bottom:6px}
+.v{font-size:clamp(30px,8vh,54px);font-weight:300;line-height:1.1}.s{font-size:15px;color:var(--d);margin-top:2px}
+.bar{height:8px;background:#20252c;border-radius:4px;margin:8px 0;overflow:hidden}.bar i{display:block;height:100%;background:#5ab0ff;transition:width .5s}
+.t{font-size:clamp(26px,6.5vh,40px);font-weight:400;line-height:1.2}
+.g{color:var(--g)}.y{color:var(--y)}.r{color:var(--r)}.row{display:flex;justify-content:space-between;font-size:15px;margin:5px 0}
+#st{position:fixed;right:14px;bottom:6px;font-size:11px;color:#555}
+@media (orientation:portrait){#a{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr)}}
+</style></head><body><div id="a"></div><div id="st"></div>
+<script>
+const col=(v,a,b)=>v<a?'g':v<b?'y':'r',na='<span class="s">n/d</span>';
+const mo=b=>b>=1e6?(b/1e6).toFixed(1)+' Mo/s':(b/1e3).toFixed(0)+' Ko/s',gb=b=>(b/1073741824).toFixed(0);
+const tp=(t,a,b)=>t==null?'':`<span class="${col(t,a,b)} t">${Math.round(t)} °C</span>`;
+const blk=(t,l,tmp,a,b,x='')=>`<div class="c"><h2>${t}</h2>`+(l==null?na:`<div class="v ${col(l,70,90)}">${Math.round(l)} %</div><div class="bar"><i style="width:${l}%"></i></div>`)+`<div class="s">${tp(tmp,a,b)} ${x}</div></div>`;
+function draw(s){
+  const e=s.extra||{},ex=[['Puissance CPU',e.cpu_power,v=>v.toFixed(1)+' W'],['Température SSD',e.ssd,v=>Math.round(v)+' °C'],['Batterie du PC',e.battery,v=>Math.round(v)+' %']].filter(x=>x[1]!=null).map(x=>`<div class="row"><span>${x[0]}</span><b>${x[2](x[1])}</b></div>`).join('');
+  const f=(s.fans.length?s.fans.map(x=>`<div class="row"><span>${x.name}</span><b>${x.rpm} tr/min</b></div>`).join(''):'<div class="s">Ventilateurs non exposés par ce PC</div>')+ex;
+  const d=s.disks.map(x=>`<div class="row"><span>${x.mount}</span><b class="${col(x.pct,80,92)}">${gb(x.total-x.used)} Go libres</b></div><div class="bar"><i style="width:${x.pct}%"></i></div>`).join('');
+  document.getElementById('a').innerHTML=blk('Processeur',s.cpu.load,s.cpu.temp,75,90)+blk('Carte graphique',s.gpu.load,s.gpu.temp,75,90)
+   +blk('Mémoire',s.ram.pct,null,0,0,`${(s.ram.used/1073741824).toFixed(1)} / ${(s.ram.total/1073741824).toFixed(0)} Go`)
+   +`<div class="c"><h2>Réseau</h2><div class="row"><span>▼ Réception</span><b class="v" style="font-size:clamp(22px,5vh,34px)">${mo(s.net.down)}</b></div><div class="row"><span>▲ Envoi</span><b class="v" style="font-size:clamp(22px,5vh,34px)">${mo(s.net.up)}</b></div></div>`
+   +`<div class="c"><h2>Ventilateurs &amp; capteurs</h2>${f}</div><div class="c"><h2>Stockage</h2>${d}</div>`;
+  document.getElementById('st').textContent=s.lhm?'':'LibreHardwareMonitor non détecté : températures indisponibles';
+}
+async function tick(){try{const r=await fetch('/stats',{cache:'no-store'});const s=await r.json();if(s.cpu)draw(s)}catch(e){document.getElementById('st').textContent='Connexion au PC perdue…'}}
+setInterval(tick,1000);tick();
+</script></body></html>
