@@ -17,6 +17,14 @@ h2{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
 #date{font-size:16px;color:var(--dim);text-transform:capitalize;flex:1}
 #bat{font-size:15px;color:var(--dim)} #bat.low{color:var(--bad);font-weight:700}
 #wx{grid-area:wx} #air{grid-area:air} #fuel{grid-area:fuel} #elec{grid-area:elec} #agenda{grid-area:agenda}
+#agm{position:fixed;inset:0;background:rgba(0,0,0,.97);display:none;padding:14px 18px;z-index:9;overflow-y:auto;-webkit-overflow-scrolling:touch}#agm.on{display:block}
+#agh{display:flex;align-items:center;position:sticky;top:0;background:#000;padding:4px 0 8px;z-index:1}#agh h3{flex:1;font-size:18px;font-weight:500}
+.dh{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:14px 0 2px}
+.ae{padding:8px 0;border-bottom:1px solid #15181d}.ah{display:flex;gap:8px;align-items:baseline}
+.ah i{width:9px;height:9px;border-radius:50%;flex:none;align-self:center}
+.at{color:var(--dim);flex:none;min-width:92px;font-size:14px;font-variant-numeric:tabular-nums}.an{font-size:17px;font-weight:500}
+.ap{color:var(--acc);font-size:14px;margin:3px 0 0 17px}.ad{color:#b8c0c8;font-size:15px;white-space:pre-wrap;margin:4px 0 0 17px;line-height:1.4}
+.ae.past{opacity:.45}.ae.od .an{color:var(--bad)}.ae.live .at{color:var(--ok)}
 #agb{font-size:14px;line-height:1.35}.dl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:6px 0 3px}
 .ev{display:flex;gap:7px;align-items:baseline;padding:2px 0;min-width:0}.ev i{width:8px;height:8px;border-radius:50%;flex:none;align-self:center}
 .ev .tm{color:var(--dim);flex:none;min-width:46px;font-variant-numeric:tabular-nums}.ev .ti{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -49,10 +57,11 @@ grid-template-areas:"head head" "wx wx" "air elec" "fuel fuel" "agenda agenda";o
   <div id="air" class="card"><h2>Air &amp; pollens</h2><div id="airb"></div></div>
   <div id="fuel" class="card"><h2 id="fuelh">Carburants</h2><div id="fuelb" class="tiles"></div></div>
   <div id="elec" class="card"><h2>Électricité (prix spot)</h2><div id="elecb"></div></div>
-  <div id="agenda" class="card"><h2>Agenda &amp; tâches</h2><div id="agb"></div></div>
+  <div id="agenda" class="card" onclick="openAgenda()"><h2>Agenda &amp; tâches ▸ détails</h2><div id="agb"></div></div>
 </div>
 <div id="modal"><div id="mh"><h3 id="mt"></h3><span id="mb"></span><button class="btn" onclick="closeM()">Fermer</button></div>
 <div id="chart"></div><div id="note"></div></div>
+<div id="agm"><div id="agh"><h3>Agenda &amp; tâches</h3><button class="btn" onclick="closeM()">Fermer</button></div><div id="agc"></div></div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -155,6 +164,35 @@ function renderAgenda(){
   if(tk.length)h+='<div class="dl">À faire</div>'+tk.join('');
   el.innerHTML=h;
 }
+/* ---- vue agrandie de l'agenda ---- */
+const clean=s=>String(s||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li|h\d)>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&').replace(/\n{3,}/g,'\n\n').trim();
+const cut=(s,n)=>s.length>n?s.slice(0,n)+'…':s;
+function openAgenda(){
+  const a=S.ag;if(!a)return;
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth(),d=now.getDate(),td=new Date(y,m,d).toLocaleDateString('sv-SE');
+  const ev=a.events.map(e=>Object.assign({},e,{s:new Date(e.start),e2:new Date(e.end)}));
+  let h='';
+  for(let i=0;i<3;i++){
+    const f=new Date(y,m,d+i),t=new Date(y,m,d+i+1);
+    const list=ev.filter(e=>e.s<t&&e.e2>f).sort((p,q)=>(q.allDay-p.allDay)||(p.s-q.s));
+    const lab=i===0?"Aujourd'hui":i===1?'Demain':f.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+    h+=`<div class="dh">${lab}</div>`;
+    if(!list.length){h+='<div class="none" style="padding:6px 0">Rien de prévu</div>';continue}
+    h+=list.map(e=>{
+      const past=i===0&&!e.allDay&&e.e2<now,live=i===0&&!e.allDay&&e.s<=now&&e.e2>now;
+      const tm=e.allDay?'Journée':hm(e.s)+' – '+hm(e.e2),ds=clean(e.description);
+      return `<div class="ae ${past?'past':''} ${live?'live':''}"><div class="ah"><i style="background:${esc(e.color||'#5ab0ff')}"></i><span class="at">${tm}</span><span class="an">${esc(e.title)}</span></div>`
+        +(e.place?`<div class="ap">📍 ${esc(e.place)}</div>`:'')+(ds?`<div class="ad">${esc(cut(ds,700))}</div>`:'')+'</div>'}).join('');
+  }
+  const tasks=(a.tasks||[]).slice().sort((p,q)=>(p.due||'9')<(q.due||'9')?-1:1);
+  if(tasks.length){
+    h+='<div class="dh">Tâches</div>'+tasks.map(t=>{
+      const od=t.due&&t.due<td,nt=clean(t.notes);
+      const dd=t.due?new Date(t.due+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):'Sans date';
+      return `<div class="ae ${od?'od':''}"><div class="ah"><span class="at">☐ ${dd}</span><span class="an">${esc(t.title)}</span></div>`+(nt?`<div class="ad">${esc(cut(nt,500))}</div>`:'')+'</div>'}).join('');
+  }
+  $('#agc').innerHTML=h;$('#agm').scrollTop=0;$('#agm').classList.add('on');
+}
 function render(){clock();renderWx();renderAir();renderFuel();renderElec();renderAgenda()}
 
 /* ---- graphiques SVG ---- */
@@ -176,7 +214,7 @@ function line(series,{xl}){
 let cur=null;
 function openM(title,btns,draw){$('#mt').textContent=title;$('#mb').innerHTML=btns.map((b,i)=>`<button class="btn ${i==0?'on':''}" onclick="pick(${i})">${b}</button>`).join(' ');cur={draw,n:btns.length};pick(0);$('#modal').classList.add('on')}
 function pick(i){[...$('#mb').children].forEach((b,k)=>b.classList.toggle('on',k===i));cur.draw(i)}
-function closeM(){$('#modal').classList.remove('on')}
+function closeM(){$('#modal').classList.remove('on');$('#agm').classList.remove('on')}
 function fuelChart(k){
   const days=(S.fh&&S.fh.days)||[],R=[7,30,90];
   openM(`${FN[k]} · ${S.fh.city}`,['7 j','30 j','90 j'],i=>{
