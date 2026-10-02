@@ -125,14 +125,22 @@ function renderElec(){
 /* ---- agenda & tâches (l'URL vient de l'app Android, jamais de GitHub) ---- */
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hm=d=>d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-async function loadAgenda(){
-  let u='';try{if(window.Android&&Android.getAgendaUrl)u=Android.getAgendaUrl()}catch(e){}
-  if(!u)return;
-  try{const r=await fetch(u,{cache:'no-store'});const j=await r.json();if(j.events){S.ag=j;ls.set('ag',j)}}catch(e){}
+let agMsg='';
+function loadAgenda(){
+  if(!(window.Android&&Android.refreshAgenda)){agMsg='App Android à réinstaller (nouvelle version requise)';return}
+  if(!Android.hasAgenda()){agMsg='AGENDA_URL est vide dans Secrets.kt';return}
+  agMsg='Chargement…';Android.refreshAgenda();
+}
+function onAgenda(str){
+  try{const j=JSON.parse(str);
+    if(j.events){S.ag=j;ls.set('ag',j);agMsg=''}
+    else agMsg=j.error==='unauthorized'?'Jeton refusé : différent de celui du script':'Erreur : '+(j.error||'réponse inattendue')}
+  catch(e){agMsg='Réponse illisible (page Google au lieu des données ?)'}
+  renderAgenda()
 }
 function renderAgenda(){
   const el=$('#agb');if(!el)return;const a=S.ag;
-  if(!a){el.innerHTML='<div class="none">Agenda non configuré</div>';return}
+  if(!a){el.innerHTML='<div class="none">'+esc(agMsg||'Agenda non configuré')+'</div>';return}
   const now=new Date(),d0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),d1=new Date(d0.getTime()+864e5),d2=new Date(d0.getTime()+2*864e5);
   const ev=a.events.map(e=>Object.assign({},e,{s:new Date(e.start),e2:new Date(e.end)}));
   const day=(f,t)=>ev.filter(e=>e.s<t&&e.e2>f).sort((x,y)=>(y.allDay-x.allDay)||(x.s-y.s));
