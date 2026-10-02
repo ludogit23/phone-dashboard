@@ -8,15 +8,19 @@
 :root{--bg:#000;--card:#0d0f12;--tx:#eef1f4;--dim:#7d8792;--ok:#3ddc84;--warn:#ffc233;--bad:#ff5a5f;--acc:#5ab0ff}
 *{box-sizing:border-box;margin:0}
 html,body{height:100%;background:var(--bg);color:var(--tx);font-family:system-ui,Roboto,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
-#app{height:100%;display:grid;gap:10px;padding:12px;grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:auto 1fr 1fr;
-grid-template-areas:"head head head" "wx wx air" "fuel fuel elec"}
+#app{height:100%;display:grid;gap:10px;padding:12px;grid-template-columns:1fr 1fr 1fr 1.15fr;grid-template-rows:auto 1fr 1fr;
+grid-template-areas:"head head head head" "wx wx air agenda" "fuel fuel elec agenda"}
 .card{background:var(--card);border-radius:16px;padding:12px 14px;min-width:0;min-height:0;overflow:hidden}
 h2{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
 #head{grid-area:head;display:flex;align-items:baseline;gap:18px;background:none;padding:0 4px}
 #clock{font-size:clamp(40px,9vh,64px);font-weight:300;line-height:1}
 #date{font-size:16px;color:var(--dim);text-transform:capitalize;flex:1}
 #bat{font-size:15px;color:var(--dim)} #bat.low{color:var(--bad);font-weight:700}
-#wx{grid-area:wx} #air{grid-area:air} #fuel{grid-area:fuel} #elec{grid-area:elec}
+#wx{grid-area:wx} #air{grid-area:air} #fuel{grid-area:fuel} #elec{grid-area:elec} #agenda{grid-area:agenda}
+#agb{font-size:14px;line-height:1.35}.dl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:6px 0 3px}
+.ev{display:flex;gap:7px;align-items:baseline;padding:2px 0;min-width:0}.ev i{width:8px;height:8px;border-radius:50%;flex:none;align-self:center}
+.ev .tm{color:var(--dim);flex:none;min-width:46px;font-variant-numeric:tabular-nums}.ev .ti{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev.live .tm{color:var(--ok)}.none{color:var(--dim);font-size:13px}.tk{display:flex;gap:7px;padding:2px 0}.tk .ti{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tk.od{color:var(--bad)}.tk.nd{color:var(--dim)}
 .now{display:flex;align-items:center;gap:12px;margin-bottom:6px}
 .now .big{font-size:clamp(36px,8vh,54px);font-weight:300}.now .ic{font-size:clamp(34px,7vh,48px)}
 .now .sub{color:var(--dim);font-size:14px;line-height:1.4}
@@ -34,8 +38,8 @@ h2{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
 #mh{display:flex;align-items:center;gap:10px;margin-bottom:8px}#mh h3{flex:1;font-size:18px;font-weight:500}
 .btn{background:#20252c;color:var(--tx);border:0;border-radius:10px;padding:8px 14px;font-size:14px}.btn.on{background:var(--acc);color:#000}
 #chart{flex:1;min-height:0}#note{color:var(--dim);font-size:13px;margin-top:6px}
-@media (orientation:portrait){#app{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto auto;
-grid-template-areas:"head head" "wx wx" "air elec" "fuel fuel";overflow:auto}html,body{overflow:auto}}
+@media (orientation:portrait){#app{grid-template-columns:1fr 1fr;grid-template-rows:repeat(6,auto);
+grid-template-areas:"head head" "wx wx" "air elec" "fuel fuel" "agenda agenda";overflow:auto}html,body{overflow:auto}}
 </style>
 </head>
 <body>
@@ -45,6 +49,7 @@ grid-template-areas:"head head" "wx wx" "air elec" "fuel fuel";overflow:auto}htm
   <div id="air" class="card"><h2>Air &amp; pollens</h2><div id="airb"></div></div>
   <div id="fuel" class="card"><h2 id="fuelh">Carburants</h2><div id="fuelb" class="tiles"></div></div>
   <div id="elec" class="card"><h2>Électricité (prix spot)</h2><div id="elecb"></div></div>
+  <div id="agenda" class="card"><h2>Agenda &amp; tâches</h2><div id="agb"></div></div>
 </div>
 <div id="modal"><div id="mh"><h3 id="mt"></h3><span id="mb"></span><button class="btn" onclick="closeM()">Fermer</button></div>
 <div id="chart"></div><div id="note"></div></div>
@@ -52,7 +57,7 @@ grid-template-areas:"head head" "wx wx" "air elec" "fuel fuel";overflow:auto}htm
 <script>
 const $=s=>document.querySelector(s);
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const S={cfg:ls.get('cfg'),wx:ls.get('wx'),air:ls.get('air'),fuel:ls.get('fuel'),fh:ls.get('fh'),el:ls.get('el'),eh:ls.get('eh')};
+const S={cfg:ls.get('cfg'),wx:ls.get('wx'),air:ls.get('air'),fuel:ls.get('fuel'),fh:ls.get('fh'),el:ls.get('el'),eh:ls.get('eh'),ag:ls.get('ag')};
 const FN={gazole:'Gazole',sp95:'SP95',e10:'SP95-E10',sp98:'SP98',e85:'E85',gplc:'GPLc'};
 const WC=c=>c===0?'☀️':c<=2?'⛅':c===3?'☁️':c<=48?'🌫️':c<=57?'🌦️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌧️':c<=86?'🌨️':'⛈️';
 const WT=c=>c===0?'Dégagé':c<=2?'Peu nuageux':c===3?'Couvert':c<=48?'Brouillard':c<=57?'Bruine':c<=67?'Pluie':c<=77?'Neige':c<=82?'Averses':c<=86?'Averses de neige':'Orage';
@@ -69,7 +74,7 @@ async function refresh(){
     getJ('wx',[`https://api.open-meteo.com/v1/forecast?${b}&models=meteofrance_seamless&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset`,'data/weather.json']),
     getJ('air',[`https://air-quality-api.open-meteo.com/v1/air-quality?${b}&current=european_aqi,pm10,pm2_5&hourly=european_aqi,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen`,'data/air.json']),
     getJ('fuel',['data/fuel.json']),getJ('fh',['data/fuel_history.json']),
-    getJ('el',['data/electricity.json']),getJ('eh',['data/electricity_history.json'])
+    getJ('el',['data/electricity.json']),getJ('eh',['data/electricity_history.json']),loadAgenda()
   ]);
   render();
 }
@@ -83,7 +88,7 @@ function renderWx(){
   const w=S.wx;if(!w||!w.current)return;
   const cur=w.current,H=w.hourly,D=w.daily;
   let i=H.time.findIndex(t=>t>=cur.time.slice(0,13));if(i<0)i=0;
-  const hrs=[];for(let k=i;k<Math.min(i+12,H.time.length);k++)hrs.push(`<div class="h"><div class="t">${H.time[k].slice(11,13)}h</div><div class="i">${WC(H.weather_code[k])}</div><div>${Math.round(H.temperature_2m[k])}°</div><div class="r">${H.precipitation_probability[k]>=20?H.precipitation_probability[k]+'%':''}</div></div>`);
+  const hrs=[];for(let k=i;k<Math.min(i+10,H.time.length);k++)hrs.push(`<div class="h"><div class="t">${H.time[k].slice(11,13)}h</div><div class="i">${WC(H.weather_code[k])}</div><div>${Math.round(H.temperature_2m[k])}°</div><div class="r">${H.precipitation_probability[k]>=20?H.precipitation_probability[k]+'%':''}</div></div>`);
   $('#wxb').innerHTML=`<div class="now"><span class="ic">${WC(cur.weather_code)}</span><span class="big">${Math.round(cur.temperature_2m)}°</span>
   <div class="sub">${WT(cur.weather_code)} · ressenti ${Math.round(cur.apparent_temperature)}°<br>Min ${Math.round(D.temperature_2m_min[0])}° / Max ${Math.round(D.temperature_2m_max[0])}° · vent ${Math.round(cur.wind_speed_10m)} km/h (raf. ${Math.round(cur.wind_gusts_10m)})<br>☀ ${D.sunrise[0].slice(11)} → ${D.sunset[0].slice(11)}</div></div><div class="hours">${hrs.join('')}</div>`;
 }
@@ -117,7 +122,32 @@ function renderElec(){
   const avg=day.reduce((a,b)=>a+b,0)/(day.length||1),v=c?c.c_kwh:avg,col=v<=avg*.8?'g':v>=avg*1.2?'r':'y';
   $('#elecb').innerHTML=`<div class="tile" onclick="elecChart()"><div class="n">Maintenant</div><div class="p ${col}">${v.toFixed(1)} c€/kWh</div><div class="s">Aujourd'hui : min ${Math.min(...day).toFixed(1)} · moy ${avg.toFixed(1)} · max ${Math.max(...day).toFixed(1)}<br>Prix de gros, hors taxes · appuie pour le graphique</div></div>`;
 }
-function render(){clock();renderWx();renderAir();renderFuel();renderElec()}
+/* ---- agenda & tâches (l'URL vient de l'app Android, jamais de GitHub) ---- */
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hm=d=>d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+async function loadAgenda(){
+  let u='';try{if(window.Android&&Android.getAgendaUrl)u=Android.getAgendaUrl()}catch(e){}
+  if(!u)return;
+  try{const r=await fetch(u,{cache:'no-store'});const j=await r.json();if(j.events){S.ag=j;ls.set('ag',j)}}catch(e){}
+}
+function renderAgenda(){
+  const el=$('#agb');if(!el)return;const a=S.ag;
+  if(!a){el.innerHTML='<div class="none">Agenda non configuré</div>';return}
+  const now=new Date(),d0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),d1=new Date(d0.getTime()+864e5),d2=new Date(d0.getTime()+2*864e5);
+  const ev=a.events.map(e=>Object.assign({},e,{s:new Date(e.start),e2:new Date(e.end)}));
+  const day=(f,t)=>ev.filter(e=>e.s<t&&e.e2>f).sort((x,y)=>(y.allDay-x.allDay)||(x.s-y.s));
+  const row=e=>{const live=!e.allDay&&e.s<=now&&e.e2>now;
+    return `<div class="ev ${live?'live':''}"><i style="background:${esc(e.color||'#5ab0ff')}"></i><span class="tm">${e.allDay?'Journée':hm(e.s)}</span><span class="ti">${esc(e.title)}</span></div>`};
+  const T=day(d0,d1).filter(e=>e.allDay||e.e2>=now),M=day(d1,d2);
+  let h='<div class="dl">Aujourd\'hui</div>'+(T.length?T.slice(0,5).map(row).join(''):'<div class="none">Plus rien de prévu</div>');
+  if(M.length)h+='<div class="dl">Demain</div>'+M.slice(0,3).map(row).join('');
+  const td=d0.toLocaleDateString('sv-SE');
+  const due=(a.tasks||[]).filter(t=>t.due&&t.due<=td).sort((x,y)=>x.due<y.due?-1:1),und=(a.tasks||[]).filter(t=>!t.due).slice(0,2);
+  const tk=due.map(t=>`<div class="tk ${t.due<td?'od':''}"><span>☐</span><span class="ti">${esc(t.title)}</span></div>`).concat(und.map(t=>`<div class="tk nd"><span>☐</span><span class="ti">${esc(t.title)}</span></div>`)).slice(0,5);
+  if(tk.length)h+='<div class="dl">À faire</div>'+tk.join('');
+  el.innerHTML=h;
+}
+function render(){clock();renderWx();renderAir();renderFuel();renderElec();renderAgenda()}
 
 /* ---- graphiques SVG ---- */
 function line(series,{xl}){
@@ -167,7 +197,7 @@ if(window.Android)setSurv(Android.isSurveillance());
 /* ---- batterie, cycle de vie ---- */
 if(navigator.getBattery)navigator.getBattery().then(b=>{const u=()=>{const p=Math.round(b.level*100),e=$('#bat');e.textContent=(b.charging?'⚡ ':'🔋 ')+p+' %';e.className=(!b.charging&&p<25)?'low':''};u();b.onlevelchange=b.onchargingchange=u});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();refresh()}});
-setInterval(clock,1000);setInterval(refresh,10*60*1000);
+setInterval(clock,1000);setInterval(renderAgenda,60000);setInterval(refresh,10*60*1000);
 render();refresh();
 </script>
 </body>
